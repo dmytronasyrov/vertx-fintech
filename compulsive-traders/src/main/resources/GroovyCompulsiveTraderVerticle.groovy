@@ -1,14 +1,11 @@
-/*
-This is a Groovy verticle implemented as a _script_. To the content of this script is the `start` method of the
- verticle.
- */
-
 import io.vertx.groovy.core.CompositeFuture
 import io.vertx.groovy.core.Future
 import io.vertx.groovy.core.eventbus.MessageConsumer
 import io.vertx.groovy.servicediscovery.types.EventBusService;
 import io.vertx.groovy.servicediscovery.types.MessageSource;
 import io.vertx.groovy.servicediscovery.ServiceDiscovery
+import io.vertx.servicediscovery.ServiceDiscovery
+import io.vertx.servicediscovery.types.MessageSource
 import io.vertx.workshop.portfolio.PortfolioService
 import io.vertx.workshop.trader.impl.TraderUtils
 
@@ -20,8 +17,8 @@ println("Groovy compulsive trader configured for company " + company + " and sha
 // We create the discovery service object.
 def discovery = ServiceDiscovery.create(vertx);
 
-Future<MessageConsumer<Map>> marketFuture = Future.future();
-Future<PortfolioService> portfolioFuture = Future.future();
+io.vertx.core.Future<io.vertx.core.eventbus.MessageConsumer<Map>> marketFuture = io.vertx.core.Future.future();
+io.vertx.core.Future<PortfolioService> portfolioFuture = io.vertx.core.Future.future();
 
 MessageSource.getConsumer(discovery,
         ["name" : "market-data"], marketFuture.completer());
@@ -29,13 +26,13 @@ EventBusService.getProxy(discovery,
         "io.vertx.workshop.portfolio.PortfolioService", portfolioFuture.completer());
 
 // When done (both services retrieved), execute the handler
-CompositeFuture.all(marketFuture, portfolioFuture).setHandler( { ar ->
+io.vertx.core.CompositeFuture.all(marketFuture, portfolioFuture).setHandler( { ar ->
   if (ar.failed()) {
     System.err.println("One of the required service cannot be retrieved: " + ar.cause());
   } else {
     // Our services:
     PortfolioService portfolio = portfolioFuture.result();
-    MessageConsumer<Map> marketConsumer = marketFuture.result();
+    io.vertx.core.eventbus.MessageConsumer<Map> marketConsumer = marketFuture.result();
 
     // Listen the market...
     marketConsumer.handler( { message ->
@@ -44,4 +41,3 @@ CompositeFuture.all(marketFuture, portfolioFuture).setHandler( { ar ->
     });
   }
 });
-

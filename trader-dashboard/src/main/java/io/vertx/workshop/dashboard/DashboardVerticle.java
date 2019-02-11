@@ -4,6 +4,7 @@ import io.vertx.circuitbreaker.CircuitBreaker;
 import io.vertx.circuitbreaker.CircuitBreakerOptions;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
@@ -108,5 +109,41 @@ public class DashboardVerticle extends MicroServiceVerticle {
         }
       });
     }
+  }
+
+  private void callAuditServiceTimeout(RoutingContext context) {
+    if (client == null) {
+      context.response()
+          .putHeader("content-type", "application/json")
+          .setStatusCode(200)
+          .end(new JsonObject().put("message", "No audit service").encode());
+    } else {
+      client.get("/")
+          .timeout(5000)
+          .send(ar -> {
+            if (ar.succeeded()) {
+              HttpResponse<Buffer> response = ar.result();
+              context.response()
+                  .putHeader("content-type", "application/json")
+                  .setStatusCode(200)
+                  .end(response.body());
+            } else {
+              context.fail(ar.cause());
+            }
+          });
+    }
+  }
+
+  private void callAuditServiceTimeoutWithCircuitBreaker(RoutingContext context) {
+    HttpServerResponse resp = context.response()
+        .putHeader("content-type", "application/json")
+        .setStatusCode(200);
+
+    circuit.executeWithFallback(
+        future ->
+            client.get("/").send(ar -> future.handle(ar.map(HttpResponse::body))),
+        t -> Buffer.buffer("{\"message\":\"No audit service, or unable to call it\"}")
+    )
+        .setHandler(ar -> resp.end(ar.result()));
   }
 }
